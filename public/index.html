@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LAN Chat</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── Loading Screen ─────────────────────────────────────────────────────── -->
+<div id="loadingScreen" style="display:none">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Connecting...</div>
+</div>
+
+<!-- ── Auth Screen ────────────────────────────────────────────────────────── -->
+<div class="auth-wrap" id="authScreen">
+  <div class="brand">
+    <h1>LAN Chat</h1>
+    <p>// connect with people nearby</p>
+  </div>
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" id="tabLogin" onclick="switchTab('login')">Login</button>
+      <button class="tab" id="tabRegister" onclick="switchTab('register')">Register</button>
+    </div>
+    <div id="loginForm">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="loginUser" placeholder="your_name" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn" onclick="doLogin()">Connect →</button>
+    </div>
+    <div id="registerForm" style="display:none">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="regUser" placeholder="choose_a_name" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="regPass" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <button class="btn" onclick="doRegister()">Create Account →</button>
+    </div>
+    <div class="toast" id="authToast"></div>
+  </div>
+</div>
+
+<!-- ── Incoming Call Popup ────────────────────────────────────────────────── -->
+<div class="call-popup" id="callPopup">
+  <div class="call-popup-avatar" id="callPopupAvatar">?</div>
+  <div class="call-popup-info">
+    <div class="call-popup-name" id="callPopupName">Someone</div>
+    <div class="call-popup-sub">Incoming voice call...</div>
+  </div>
+  <div class="call-popup-actions">
+    <button class="call-accept-btn" onclick="acceptCall()">📞</button>
+    <button class="call-decline-btn" onclick="declineCall()">📵</button>
+  </div>
+</div>
+
+<!-- ── Active Call Bar ────────────────────────────────────────────────────── -->
+<div class="call-bar" id="callBar">
+  <div class="call-bar-left">
+    <span class="call-bar-dot"></span>
+    <span class="call-bar-name" id="callBarName">Calling...</span>
+    <span class="call-bar-timer" id="callTimer">00:00</span>
+  </div>
+  <div class="call-bar-actions">
+    <button class="call-bar-btn" id="muteBtn" onclick="toggleMute()" title="Mute">🎤</button>
+    <button class="call-bar-btn hangup" onclick="hangUp()" title="Hang up">📵</button>
+  </div>
+</div>
+
+<!-- ── Chat App ───────────────────────────────────────────────────────────── -->
+<div class="chat-app" id="chatApp">
+
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">LAN Chat</div>
+      <div class="me"><span class="me-dot"></span><span id="myName">you</span></div>
+    </div>
+    <div class="online-label">Online</div>
+    <div class="user-list" id="userList">
+      <div style="padding:8px 10px;color:var(--muted);font-size:0.8rem;font-family:'JetBrains Mono',monospace;">no one else online</div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="logout()">⏻ Disconnect</button>
+    </div>
+  </aside>
+
+  <main class="chat-main">
+    <div class="chat-header">
+      <div>
+        <div class="room-name" id="chatTitle"># general</div>
+        <div class="room-sub" id="chatSub">LAN broadcast</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="pm-badge" id="pmBadge" style="display:none" onclick="clearPM()">✕ Exit DM</span>
+        <div class="conn-status" id="connStatus"><span class="status-dot"></span> connecting</div>
+      </div>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">💬</div>
+        <div class="empty-text">No messages yet. Say hello!</div>
+      </div>
+    </div>
+
+    <!-- GIF Picker -->
+    <div class="gif-picker" id="gifPicker">
+      <div class="gif-search-bar">
+        <input class="gif-search-input" id="gifSearch" placeholder="Search GIFs..." oninput="searchGifs()">
+        <button class="gif-close-btn" onclick="closeGifPicker()">✕</button>
+      </div>
+      <div class="gif-trending-label" id="gifLabel">🔥 Trending</div>
+      <div class="gif-grid" id="gifGrid"><div class="gif-loading">Loading GIFs...</div></div>
+    </div>
+
+    <div class="chat-input-area">
+      <div class="pm-indicator" id="pmIndicator">
+        <span>DM → <b id="pmTarget"></b></span>
+        <span class="pm-close" onclick="clearPM()">✕</span>
+      </div>
+      <button class="gif-btn" onclick="toggleGifPicker()" title="Send a GIF">GIF</button>
+      <button class="mic-btn" id="micBtn"
+              onmousedown="startRecording()"
+              onmouseup="stopRecording()"
+              ontouchstart="startRecording()"
+              ontouchend="stopRecording()"
+              title="Hold to record voice message">🎤</button>
+      <input class="msg-input" id="msgInput"
+             placeholder="Type a message... or @ai ask me anything!" maxlength="500"
+             onkeydown="if(event.key==='Enter') sendMsg()">
+      <button class="send-btn" onclick="sendMsg()">
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+  </main>
+
+</div>
+
+<!-- Hidden audio element for remote stream -->
+<audio id="remoteAudio" autoplay playsinline muted="false" volume="1.0"></audio>
+
+<script src="app.js"></script>
+</body>
+</html>
